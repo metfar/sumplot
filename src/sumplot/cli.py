@@ -19,8 +19,8 @@
 #  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #  MA 02110-1301, USA.
 #  
-from .spec import *;
-from .adapters import to_chart_spec;
-from .compat import aes, ggplot, geom_point, geom_line, geom_bar, geom_bar3d, geom_histogram, after_stat;
-from .render import figure, ggsave, show_plot;
-__version__="0.1.0a2";
+import argparse;
+from . import __version__;
+
+def main(argv=None):
+    parser=argparse.ArgumentParser(prog="sumplot",description="SUM backend-neutral plotting engine."); parser.add_argument("--version",action="version",version="sumplot {}".format(__version__)); parser.parse_args(argv); parser.print_help(); return 0;

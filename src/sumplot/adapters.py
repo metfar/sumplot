@@ -19,16 +19,21 @@
 #  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #  MA 02110-1301, USA.
 #  
-from sumui import ChartSeries, ChartSpec;
+from sumui import AxisSpec, ChartSeries, ChartSpec;
 from .spec import resolve;
+
+def _fill_options(layer):
+    fill=layer.param("fill",None); return (("series_colors",(fill,)),) if fill else ();
 
 def to_chart_spec(plot):
     resolved=resolve(plot); layer=resolved.layers[0] if resolved.layers else None; labels=dict(resolved.labels);
-    if layer is None: return ChartSpec("bar", title=labels.get("title",""));
+    if layer is None: return ChartSpec("bar",title=labels.get("title",""));
+    if layer.geom=="histogram":
+        width=float(layer.computed_value("width",1.0)); categories=tuple("{:g}".format(float(value)) for value in layer.x); return ChartSpec("bar",title=labels.get("title",""),categories=categories,series=(ChartSeries(name="",values=layer.y),),x_axis=AxisSpec(label=labels.get("x","")),y_axis=AxisSpec(label=labels.get("y","density")),legend=False,options=_fill_options(layer)+(("binwidth",width),));
     if layer.series:
-        return ChartSpec("bar3d" if layer.geom=="bar3d" else "bar", title=labels.get("title",""), categories=layer.x, series=tuple(ChartSeries(name=name,values=values) for name,values in layer.series), stacked=True);
+        return ChartSpec("bar3d" if layer.geom=="bar3d" else "bar",title=labels.get("title",""),categories=layer.x,series=tuple(ChartSeries(name=name,values=values) for name,values in layer.series),stacked=True,options=_fill_options(layer));
     if layer.geom in ("bar","bar3d"):
-        return ChartSpec("bar3d" if layer.geom=="bar3d" else "bar", title=labels.get("title",""), categories=tuple(str(x) for x in layer.x), series=(ChartSeries(values=layer.y),));
+        return ChartSpec("bar3d" if layer.geom=="bar3d" else "bar",title=labels.get("title",""),categories=tuple(str(x) for x in layer.x),series=(ChartSeries(values=layer.y),),options=_fill_options(layer));
     if layer.geom in ("line","scatter"):
         return ChartSpec(layer.geom,title=labels.get("title",""),series=(ChartSeries(x_values=layer.x,values=layer.y),));
     raise ValueError("No ChartSpec adapter for {}".format(layer.geom));

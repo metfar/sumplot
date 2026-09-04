@@ -28,3 +28,18 @@ def test_stack():
 def test_chart_adapter():
     p=PlotSpec({"x":["A"],"y":[2]},AesSpec.from_dict({"x":"x","y":"y"}),(LayerSpec("bar3d"),)); assert to_chart_spec(p).kind=="bar3d";
 def test_after_stat_node(): assert isinstance(after_stat("density"),AfterStat);
+
+
+def test_histogram_density():
+    p=ggplot({"mpg":[10.2,10.8,11.1,12.4]},aes("mpg",after_stat("density")))+geom_histogram(binwidth=1,fill="#51A8C9"); r=resolve(p); layer=r.layers[0]; assert layer.geom=="histogram"; assert abs(sum(layer.y)*layer.computed_value("width")-1.0)<1e-12;
+
+def test_histogram_chart_adapter_color():
+    p=ggplot({"mpg":[10.2,10.8,11.1]},aes("mpg",after_stat("density")))+geom_histogram(binwidth=1,fill="#51A8C9"); chart=to_chart_spec(p); assert chart.kind=="bar"; assert chart.option("series_colors")==("#51A8C9",);
+
+def test_ggsave_png(tmp_path,monkeypatch):
+    monkeypatch.setenv("MPLBACKEND","Agg"); p=ggplot({"mpg":[10.2,10.8,11.1]},aes("mpg",after_stat("density")))+geom_histogram(binwidth=1,fill="#51A8C9"); target=tmp_path/"hist.png"; ggsave(target,p,width=4,height=3,dpi=80); assert target.read_bytes()[:8]==b"\x89PNG\r\n\x1a\n";
+
+def test_cli_version(capsys):
+    from sumplot.cli import main; import pytest;
+    with pytest.raises(SystemExit) as exc: main(["--version"]);
+    assert exc.value.code==0; assert "sumplot 0.1.0a2" in capsys.readouterr().out;
