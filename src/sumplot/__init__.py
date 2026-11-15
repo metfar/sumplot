@@ -23,4 +23,4 @@ from .spec import *;
 from .adapters import to_chart_spec;
 from .compat import aes, ggplot, geom_point, geom_line, geom_bar, geom_bar3d, geom_histogram, after_stat;
 from .render import figure, ggsave, show_plot;
-__version__="0.1.0a2";
+__version__="0.1.0a4";

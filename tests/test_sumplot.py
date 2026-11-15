@@ -42,4 +42,4 @@ def test_ggsave_png(tmp_path,monkeypatch):
 def test_cli_version(capsys):
     from sumplot.cli import main; import pytest;
     with pytest.raises(SystemExit) as exc: main(["--version"]);
-    assert exc.value.code==0; assert "sumplot 0.1.0a2" in capsys.readouterr().out;
+    assert exc.value.code==0; assert "sumplot 0.1.0a4" in capsys.readouterr().out;
