@@ -1,4 +1,4 @@
-# SUM CLI migration — sumplot 0.1.0a4
+# SUM CLI migration — sumplot 0.1.0a5
 
 The command-line entry points in this local development snapshot adopt the
 `sumui.cli.SumArgumentParser` contract where appropriate, retaining historical

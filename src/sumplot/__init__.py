@@ -20,7 +20,8 @@
 #  MA 02110-1301, USA.
 #  
 from .spec import *;
+from .angle import *;
 from .adapters import to_chart_spec;
-from .compat import aes, ggplot, geom_point, geom_line, geom_bar, geom_bar3d, geom_histogram, after_stat;
+from .compat import aes, ggplot, geom_point, geom_line, geom_bar, geom_bar3d, geom_histogram, after_stat, coord_cartesian, coord_flip, coord_polar;
 from .render import figure, ggsave, show_plot;
-__version__="0.1.0a4";
+__version__="0.1.0a5";

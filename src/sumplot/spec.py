@@ -41,17 +41,36 @@ class AesSpec:
     @classmethod
     def from_dict(cls,value): return cls(tuple((str(k), expr(v)) for k,v in dict(value or {}).items()));
 @dataclass(frozen=True)
+class CoordSpec:
+    kind: str = "cartesian";
+    theta: str = "y";
+    start: float = 0.0;
+    direction: int = 1;
+    xlim: object = None;
+    ylim: object = None;
+    def __post_init__(self):
+        kind=str(self.kind or "cartesian").strip().lower();
+        if kind not in ("cartesian","flip","polar"): raise ValueError("Unsupported coordinate system: {}".format(self.kind));
+        direction=1 if int(self.direction)>=0 else -1;
+        theta=str(self.theta or "y").strip().lower();
+        if theta not in ("x","y"): raise ValueError("theta must be 'x' or 'y'");
+        object.__setattr__(self,"kind",kind); object.__setattr__(self,"direction",direction); object.__setattr__(self,"theta",theta); object.__setattr__(self,"start",float(self.start));
+
+@dataclass(frozen=True)
 class LayerSpec:
     geom: str; aes: AesSpec = field(default_factory=AesSpec); stat: str = "identity"; position: str = "identity"; params: tuple = field(default_factory=tuple);
     def param(self,name,default=None): return dict(self.params).get(name,default);
 @dataclass(frozen=True)
 class PlotSpec:
-    data: object = None; aes: AesSpec = field(default_factory=AesSpec); layers: tuple = field(default_factory=tuple); labels: tuple = field(default_factory=tuple); theme: tuple = field(default_factory=tuple); options: tuple = field(default_factory=tuple);
-    def add(self,layer): return PlotSpec(self.data,self.aes,self.layers+(layer,),self.labels,self.theme,self.options);
-    def __add__(self,layer): return self.add(layer);
+    data: object = None; aes: AesSpec = field(default_factory=AesSpec); layers: tuple = field(default_factory=tuple); labels: tuple = field(default_factory=tuple); theme: tuple = field(default_factory=tuple); options: tuple = field(default_factory=tuple); coord: CoordSpec = field(default_factory=CoordSpec);
+    def add(self,component):
+        if isinstance(component,LayerSpec): return PlotSpec(self.data,self.aes,self.layers+(component,),self.labels,self.theme,self.options,self.coord);
+        if isinstance(component,CoordSpec): return PlotSpec(self.data,self.aes,self.layers,self.labels,self.theme,self.options,component);
+        raise TypeError("Unsupported plot component: {}".format(type(component).__name__));
+    def __add__(self,component): return self.add(component);
     def option(self,name,default=None): return dict(self.options).get(name,default);
     def with_option(self,name,value):
-        options=dict(self.options); options[str(name)]=value; return PlotSpec(self.data,self.aes,self.layers,self.labels,self.theme,tuple(options.items()));
+        options=dict(self.options); options[str(name)]=value; return PlotSpec(self.data,self.aes,self.layers,self.labels,self.theme,tuple(options.items()),self.coord);
 @dataclass(frozen=True)
 class ResolvedLayer:
     geom: str; x: tuple=(); y: tuple=(); groups: tuple=(); series: tuple=(); params: tuple=(); computed: tuple=();
@@ -59,7 +78,7 @@ class ResolvedLayer:
     def computed_value(self,name,default=None): return dict(self.computed).get(name,default);
 @dataclass(frozen=True)
 class ResolvedPlot:
-    layers: tuple; labels: tuple=(); options: tuple=();
+    layers: tuple; labels: tuple=(); options: tuple=(); coord: CoordSpec = field(default_factory=CoordSpec);
 
 def expr(value):
     if isinstance(value,Expr): return value;
@@ -138,4 +157,4 @@ def resolve(spec):
                 series[gv][xv]=series[gv].get(xv,0.0)+float(yv);
             packed=tuple((str(group),tuple(values.get(cat,0.0) for cat in categories)) for group,values in series.items()); layers.append(ResolvedLayer(layer.geom,tuple(categories),(),tuple(groups),packed,layer.params));
         else: layers.append(ResolvedLayer(layer.geom,tuple(x) if isinstance(x,(list,tuple)) else (x,),tuple(y) if isinstance(y,(list,tuple)) else (y,),tuple(groups) if isinstance(groups,(list,tuple)) else (),(),layer.params));
-    return ResolvedPlot(tuple(layers),spec.labels,spec.options);
+    return ResolvedPlot(tuple(layers),spec.labels,spec.options,spec.coord);

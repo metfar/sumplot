@@ -19,7 +19,8 @@
 #  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #  MA 02110-1301, USA.
 #  
-from .spec import AesSpec, AfterStat, ColumnRef, LayerSpec, PlotSpec;
+from .angle import angle2rad;
+from .spec import AesSpec, AfterStat, ColumnRef, CoordSpec, LayerSpec, PlotSpec;
 
 def aes(*args,**kwargs):
     mappings={};
@@ -37,3 +38,9 @@ def geom_histogram(mapping=None,binwidth=None,bins=None,**kwargs):
     if bins is not None: kwargs["bins"]=bins;
     return LayerSpec("histogram",mapping or AesSpec(),stat="bin",position="identity",params=tuple(kwargs.items()));
 def after_stat(name): return AfterStat(str(name));
+
+
+def coord_cartesian(xlim=None,ylim=None): return CoordSpec("cartesian",xlim=xlim,ylim=ylim);
+def coord_flip(xlim=None,ylim=None): return CoordSpec("flip",xlim=xlim,ylim=ylim);
+def coord_polar(theta="y",start=0.0,direction=1,unit="rad"):
+    return CoordSpec("polar",theta=str(theta),start=angle2rad(start,unit),direction=direction);

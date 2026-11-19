@@ -42,4 +42,35 @@ def test_ggsave_png(tmp_path,monkeypatch):
 def test_cli_version(capsys):
     from sumplot.cli import main; import pytest;
     with pytest.raises(SystemExit) as exc: main(["--version"]);
-    assert exc.value.code==0; assert "sumplot 0.1.0a4" in capsys.readouterr().out;
+    assert exc.value.code==0; assert "sumplot 0.1.0a5" in capsys.readouterr().out;
+
+
+def test_coord_flip_is_model_component():
+    p=ggplot({"x":[1,2],"y":[3,4]},aes("x","y"))+geom_point()+coord_flip();
+    r=resolve(p);
+    assert r.coord.kind=="flip";
+    assert r.layers[0].x==(1,2);
+    assert r.layers[0].y==(3,4);
+
+
+def test_coord_polar_uses_mathematical_direction():
+    p=ggplot({"x":["A","B"],"y":[1,2]},aes("x","y"))+geom_bar()+coord_polar(start=90,unit="deg",direction=1);
+    r=resolve(p);
+    assert r.coord.kind=="polar";
+    assert r.coord.direction==1;
+    assert abs(rad2deg(r.coord.start)-90.0)<1e-12;
+    assert POSITIVE_ANGLE_DIRECTION=="counterclockwise";
+
+
+def test_gradian_and_gon_aliases():
+    assert abs(gra2deg(100)-90.0)<1e-12;
+    assert abs(gon2deg(100)-90.0)<1e-12;
+
+
+def test_polar_chart_adapter_preserves_sum_angle_semantics():
+    p=ggplot({"x":["A","B"],"y":[1,2]},aes("x","y"))+geom_bar()+coord_polar(start=100,unit="gon",direction=1);
+    chart=to_chart_spec(p);
+    assert chart.kind=="pie";
+    assert chart.option("angle_zero_axis")=="+x";
+    assert chart.option("angle_direction")=="counterclockwise";
+    assert abs(chart.option("start_angle_deg")-90.0)<1e-12;

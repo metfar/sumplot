@@ -19,21 +19,96 @@
 #  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #  MA 02110-1301, USA.
 #  
+
 from sumui import AxisSpec, ChartSeries, ChartSpec;
+
+from .angle import rad2deg;
 from .spec import resolve;
 
+
 def _fill_options(layer):
-    fill=layer.param("fill",None); return (("series_colors",(fill,)),) if fill else ();
+    fill=layer.param("fill",None);
+    return (("series_colors",(fill,)),) if fill else ();
+
+
+def _coord_options(resolved):
+    coord=resolved.coord;
+    if coord.kind=="flip":
+        return (("orientation","horizontal"),);
+    if coord.kind=="polar":
+        return (
+            ("angle_zero_axis","+x"),
+            ("angle_direction","counterclockwise" if coord.direction>0 else "clockwise"),
+            ("start_angle_deg",rad2deg(coord.start)),
+        );
+    return ();
+
 
 def to_chart_spec(plot):
-    resolved=resolve(plot); layer=resolved.layers[0] if resolved.layers else None; labels=dict(resolved.labels);
-    if layer is None: return ChartSpec("bar",title=labels.get("title",""));
+    resolved=resolve(plot);
+    layer=resolved.layers[0] if resolved.layers else None;
+    labels=dict(resolved.labels);
+    coord_options=_coord_options(resolved);
+
+    if layer is None:
+        return ChartSpec("bar",title=labels.get("title",""),options=coord_options);
+
+    if resolved.coord.kind=="polar":
+        if layer.geom not in ("bar","histogram"):
+            raise ValueError("coord_polar() ChartSpec adapter requires a bar/histogram layer");
+        if layer.series:
+            categories=tuple(str(name) for name,_ in layer.series);
+            values=tuple(sum(float(value) for value in series) for _,series in layer.series);
+        else:
+            categories=tuple(str(x) for x in layer.x);
+            values=tuple(float(y) for y in layer.y);
+        return ChartSpec(
+            "pie",
+            title=labels.get("title",""),
+            categories=categories,
+            series=(ChartSeries(name="",values=values),),
+            options=coord_options+_fill_options(layer),
+        );
+
     if layer.geom=="histogram":
-        width=float(layer.computed_value("width",1.0)); categories=tuple("{:g}".format(float(value)) for value in layer.x); return ChartSpec("bar",title=labels.get("title",""),categories=categories,series=(ChartSeries(name="",values=layer.y),),x_axis=AxisSpec(label=labels.get("x","")),y_axis=AxisSpec(label=labels.get("y","density")),legend=False,options=_fill_options(layer)+(("binwidth",width),));
+        width=float(layer.computed_value("width",1.0));
+        categories=tuple("{:g}".format(float(value)) for value in layer.x);
+        return ChartSpec(
+            "bar",
+            title=labels.get("title",""),
+            categories=categories,
+            series=(ChartSeries(name="",values=layer.y),),
+            x_axis=AxisSpec(label=labels.get("x","")),
+            y_axis=AxisSpec(label=labels.get("y","density")),
+            legend=False,
+            options=_fill_options(layer)+coord_options+(("binwidth",width),),
+        );
+
     if layer.series:
-        return ChartSpec("bar3d" if layer.geom=="bar3d" else "bar",title=labels.get("title",""),categories=layer.x,series=tuple(ChartSeries(name=name,values=values) for name,values in layer.series),stacked=True,options=_fill_options(layer));
+        return ChartSpec(
+            "bar3d" if layer.geom=="bar3d" else "bar",
+            title=labels.get("title",""),
+            categories=layer.x,
+            series=tuple(ChartSeries(name=name,values=values) for name,values in layer.series),
+            stacked=True,
+            options=_fill_options(layer)+coord_options,
+        );
+
     if layer.geom in ("bar","bar3d"):
-        return ChartSpec("bar3d" if layer.geom=="bar3d" else "bar",title=labels.get("title",""),categories=tuple(str(x) for x in layer.x),series=(ChartSeries(values=layer.y),),options=_fill_options(layer));
+        return ChartSpec(
+            "bar3d" if layer.geom=="bar3d" else "bar",
+            title=labels.get("title",""),
+            categories=tuple(str(x) for x in layer.x),
+            series=(ChartSeries(values=layer.y),),
+            options=_fill_options(layer)+coord_options,
+        );
+
     if layer.geom in ("line","scatter"):
-        return ChartSpec(layer.geom,title=labels.get("title",""),series=(ChartSeries(x_values=layer.x,values=layer.y),));
+        return ChartSpec(
+            layer.geom,
+            title=labels.get("title",""),
+            series=(ChartSeries(x_values=layer.x,values=layer.y),),
+            options=coord_options,
+        );
+
     raise ValueError("No ChartSpec adapter for {}".format(layer.geom));
